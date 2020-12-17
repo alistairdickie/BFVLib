@@ -9,12 +9,19 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
-
+/**
+ * UNTESTED!!!! as provided by BlueFlyVario flying instrument creator mr. Alistair Dickie
+ *
+ */
 public class PMTKParser {
     private PrintWriter printWriterMTK;
     private PrintWriter printWriterCSV;
 
-
+    /**
+     * UNTESTED!!!! as provided by BlueFlyVario flying instrument creator mr. Alistair Dickie
+     *
+     * @param line UNTESTED!!!! as provided by BlueFlyVario flying instrument creator mr. Alistair Dickie
+     */
     public PMTKParser(String line){
         String[] mainSplit = line.split("\\*");
         String[] split = mainSplit[0].split(",");
@@ -34,13 +41,13 @@ public class PMTKParser {
             }
             if(split[1].equals("1")){
                 int fourByteNum = 0;
-                String record = "";
+                StringBuilder record = new StringBuilder();
                 for(int b = 3; b < split.length; b++){
-                    record = record + split[b];
+                    record.append(split[b]);
                     fourByteNum++;
                     if(fourByteNum == 4){
                         fourByteNum = 0;
-                        byte[] bytes = hexStringToByteArray(record);
+                        byte[] bytes = hexStringToByteArray(record.toString());
 
                         byte[] timeBytes = new byte[4];
                         timeBytes[0] = bytes[0];
@@ -81,7 +88,7 @@ public class PMTKParser {
                             String CSVLine = timeStamp + "," + dateFormat.format(time) + "," + fix + "," + latitude + "," + longitude + "," + height;
                             printWriterCSV.println(CSVLine);
                         }
-                        record = "";
+                        record = new StringBuilder();
                         printWriterMTK.println(line);
                     }
                 }
@@ -96,6 +103,10 @@ public class PMTKParser {
         }
     }
 
+    /**
+     * UNTESTED!!!! as provided by BlueFlyVario flying instrument creator mr. Alistair Dickie
+     *
+     */
     private static byte[] hexStringToByteArray(String s) {
         int len = s.length();
         assert len % 2 == 1;

@@ -1,66 +1,110 @@
 package BFVlib;
 
-
+/**
+ * Command object is used to hold BlueFlyVario command codes and
+ * provides serialization of said codes with or without user provided values / arguments
+ *
+ */
 public class Command {
-    private String command;
-    private String description;
+    private final String code;
+    private final String description;
 
     private static final String PREFIX = "$";
     private static final String SUFFIX = "*";
 
-    private boolean hasUserValue = false;
-    private int userValue;
+    private boolean hasDefaultValue = false;
+    private int defaultValue = -1;
 
-    private boolean hasArguments = false;
+    private boolean hasValue = false;
+    private int userValue = -1;
+
+    private boolean acceptsArguments = false;
     private String defaultArguments;
 
-    private boolean hasUserArguments = false;
+    private boolean hasArguments = false;
     private String userArguments;
 
-    private boolean hasDefaultValue = false;
-    private int defaultValue;
+    private boolean hasMinHWVersion = false;
+    private int minHWVersion;
 
     private boolean hasParameters = false;
     private int type;
-    private int minHWVersion;
     private int minVal;
     private int maxVal;
     private double factor;
 
     private boolean isPmtk = false;
 
-
-    private Command(String command, String description) {
-        this.command = command;
-        this.description = description;
+    /**
+     * Constructor of builder that is used to create BlueFlyVario device commands
+     *
+     * @param code command code
+     * @param description command description
+     * @return Builder with provided code and description
+     */
+    protected static Builder Builder(String code, String description) {
+        return new Builder(code, description);
     }
 
-    static Builder Builder(String command, String description) {
-        return new Builder(command, description);
-    }
+    /**
+     * Builder that provides methods for setting command fields
+     *
+     */
+    protected static final class Builder {
+        private final Command cmd;
 
-    static final class Builder {
-        private Command cmd;
+        Builder(String code, String description) {
+            assert ( ! code.isEmpty() && ! description.isEmpty());
+            cmd = new Command(code, description);
 
-        Builder(String command, String description) {
-            assert (!command.isEmpty() && !description.isEmpty());
-            cmd = new Command(command, description);
-
-            if (command.startsWith("PMTK")){
+            if (code.startsWith("PMTK")){
                 cmd.isPmtk = true;
             }
         }
 
-        Builder setDefaultArguments(String val) {
-            cmd.defaultArguments = val;
-            cmd.hasArguments = true;
+        /**
+         * Sets acceptsArguments to provided value
+         *
+         * @param value to set acceptsArguments to
+         */
+        Builder setAcceptsArguments(Boolean value) {
+            cmd.acceptsArguments = value;
             return this;
         }
 
-        Builder setParameters(int type, int minHWVersion, int minVal, int maxVal, double factor) {
+        /**
+         * Sets defaultArguments to provided value
+         *
+         * @param value to set defaultArguments to
+         */
+        Builder setDefaultArguments(String value) {
+            cmd.defaultArguments = value;
+            return this;
+        }
+
+        /**
+         * Sets minHWVersion to provided value and hasMinHWVersion to true
+         *
+         * @param value to set minHWVersion to
+         */
+        Builder setMinHwVersion(int value) {
+            cmd.minHWVersion = value;
+            cmd.hasMinHWVersion = true;
+            return this;
+        }
+
+        /**
+         * Sets parameters(type, minVal, maxVal, factor) to provided values
+         * and hasParameters to true
+         *
+         * @param type of parameter
+         * @param minVal min value of the parameter, must be >= 0
+         * @param maxVal max value of the parameter, must be <= 65535
+         * @param factor of the parameter value
+         */
+        Builder setParameters(int type, int minVal, int maxVal, double factor) {
             assert (type >= BFV.TYPE_INT && type <=BFV.TYPE_INTLIST);
             cmd.type = type;
-            cmd.minHWVersion = minHWVersion;
 
             assert (minVal >= 0);
             cmd.minVal = minVal;
@@ -73,6 +117,11 @@ public class Command {
             return this;
         }
 
+        /**
+         * Sets defaultValue to provided values and hasDefaultValue to true
+         *
+         * @param value to set defaultValue to
+         */
         Builder setDefaultValue(int value) {
             assert (value >= cmd.getMinVal() && value <= cmd.getMaxVal());
             cmd.defaultValue = value;
@@ -80,139 +129,36 @@ public class Command {
             return this;
         }
 
+        /**
+         * Builds the Command
+         *
+         * @return built Command
+         */
         Command build() {
             return cmd;
         }
     }
 
-    private static int pmtkChecksum(String s) {
-        char[] msgArray = s.toCharArray();
-
-        int checksum = 0;
-        for ( char c : msgArray )
-        {
-            if ( (c == '!') || (c == '$')){
-                return -1;
-            }
-            if (c == '*')
-                break;
-
-            checksum ^= c;
-        }
-        return checksum;
-    }
-
-    public final boolean hasParameters(){
-        return hasParameters;
-    }
-
-    public final boolean hasArguments(){
-        return hasArguments;
-    }
-
-    public final boolean hasDefaultValue(){
-        return hasDefaultValue;
-    }
-
-    public final boolean hasUserValue() {
-        return hasUserValue;
-    }
-
-    public final int getType(){
-        return type;
-    }
-
-    public final int getDefaultValue(){
-        return defaultValue;
-    }
-
-    public final String getCommandCode(){
-        return command;
-    }
-
-    public final String getCompiledCommand(String arguments) {
-        this.userArguments = arguments;
-        this.hasUserArguments = true;
-        return getCompiledCommand();
-    }
-
-    public final String getCompiledCommand() {
-        // create plain command
-        String command = this.command;
-
-        // compile PMTK command
-        if(command.startsWith("PMTK")) {
-            command = PREFIX +
-                    command +
-                    SUFFIX +
-                    Integer.toHexString(pmtkChecksum(command)).toUpperCase() +
-                    "\r\n";
-        }
-        else {
-            // add arguments
-            if(this.hasArguments) {
-                command = command + " ";
-
-                if(hasUserArguments) {
-                    command = command + userArguments;
-                }
-                else {
-                    command = command + defaultArguments;
-                }
-            }
-
-            // add parameters
-            else if(this.hasParameters && this.hasUserValue) {
-                command = command + " " + this.userValue;
-            }
-
-            // add prefix and suffix
-            command = PREFIX + command + SUFFIX;
-        }
-
-        return command;
-    }
-
-    public final String getDescription(){
-        return description;
-    }
-
-    public final String getDefaultArguments(){
-        return defaultArguments;
-    }
-
-    public final int getUserValue() {
-        return userValue;
-    }
-
-    public int getMinHWVersion() {
-        return minHWVersion;
-    }
-
-    public int getMinVal() {
-        return minVal;
-    }
-
-    public int getMaxVal() {
-        return maxVal;
-    }
-
-    public double getFactor() {
-        return factor;
-    }
-
-    public boolean isPmtk() {
-        return isPmtk;
+    /**
+     * Sets userValue to -1 and hasValue to false
+     *
+     */
+    protected void resetValue() {
+        this.userValue = -1;
+        this.hasValue = false;
     }
 
     /**
-     * @param value >= 0
+     * Sets userValue from provided int used in parser to set parameter values from device
+     * where all values are already in proper form so we dont need to convert them
+     *
+     * @param iValue value to set
      * @return true if value was set, false otherwise
      */
-    public boolean setUserValue(int value) {
-        if(value >= 0) {
-            userValue = value;
-            hasUserValue = true;
+    protected boolean setFromParsed(int iValue) {
+        if(iValue >= 0) {
+            userValue = iValue;
+            hasValue = true;
             return true;
         }
         else {
@@ -220,49 +166,253 @@ public class Command {
         }
     }
 
-    private String convertValueToString(int value) {
-        String converted = null;
-        switch(this.getType()){
-            case BFV.TYPE_INT:
-                converted = String.valueOf(value);
-                break;
-            case BFV.TYPE_DOUBLE:
-                converted = String.valueOf(value / this.getFactor());
-                break;
-            case BFV.TYPE_INTOFFSET:
-                converted = String.valueOf((int) (value + this.getFactor()));
-                break;
-            case BFV.TYPE_BOOLEAN:
-                converted = String.valueOf(value != 0);
-                break;
-        }
-        return converted;
-    }
-
-    public String convertUserValueToString() {
-        return convertValueToString(this.userValue);
-    }
-
-    public String convertDefaultValueToString() {
-        return convertValueToString(this.defaultValue);
-    }
-
-    private boolean isInRange(Double value) {
-        return (this.getMinVal() <= value && value <= this.getMaxVal());
+    /**
+     * Serializes command with arguments provided in format that
+     * BlueFlyVario device accepts via serial / bluetooth
+     *
+     * @param arguments to add to command
+     * @return serialized command with arguments
+     */
+    public final String serializeCommand(String arguments) {
+        this.userArguments = arguments;
+        this.hasArguments = true;
+        return serializeCommand();
     }
 
     /**
-     * @param value user provided value
-     * @return converted int value if value converts to number and is in range "min <= value <= max", -1 otherwise
-     * @throws NullPointerException– when the string parsed is null
-     * @throws NumberFormatException– when the string parsed does not contain a parsable number
+     * Serializes command in format that BlueFlyVario device accepts via serial / bluetooth
+     *
+     * @return serialized command
      */
-    public int convertValueToInt(String value) {
-        int converted = -1;
-        double dValue = Double.parseDouble(value);
+    public final String serializeCommand() {
+        // create plain _code
+        String _code = this.code;
 
+        // compile PMTK _code
+        if(_code.startsWith("PMTK")) {
+            _code = PREFIX +
+                    _code +
+                    SUFFIX +
+                    Integer.toHexString(pmtkChecksum(_code)).toUpperCase() +
+                    "\r\n";
+        }
+        else {
+            // add arguments
+            if(this.acceptsArguments) {
+                _code = _code + " ";
+
+                if(hasArguments) {
+                    _code = _code + userArguments;
+                }
+                else {
+                    _code = _code + defaultArguments;
+                }
+            }
+
+            // add parameters
+            else if(this.hasParameters && this.hasValue) {
+                _code = _code + " " + this.userValue;
+            }
+
+            // add prefix and suffix
+            _code = PREFIX + _code + SUFFIX;
+        }
+
+        return _code;
+    }
+
+    /**
+     * @return true if Command accepts arguments, false otherwise
+     */
+    public final boolean acceptsArguments(){
+        return acceptsArguments;
+    }
+
+    /**
+     * @return true if Parameter has minimal required hardware version, false otherwise
+     */
+    public final boolean hasMinHWVersion(){
+        return hasMinHWVersion;
+    }
+
+    /**
+     * @return true if Command has Parameters, false otherwise
+     */
+    public final boolean hasParameters(){
+        return hasParameters;
+    }
+
+    /**
+     * @return true if Parameter has default value, false otherwise
+     */
+    public final boolean hasDefaultValue(){
+        return hasDefaultValue;
+    }
+
+    /**
+     * @return true if Parameter has user value, false otherwise
+     */
+    public final boolean hasValue() {
+        return hasValue;
+    }
+
+    /**
+     * One of: TYPE_INT, TYPE_DOUBLE, TYPE_INTOFFSET, TYPE_BOOLEAN, TYPE_INTLIST
+     *
+     * @return type of the Parameter
+     */
+    public final int getType(){
+        return type;
+    }
+
+    /**
+     * @return code of the Command
+     */
+    public final String getCommandCode(){
+        return code;
+    }
+
+    /**
+     * @return description of the Command
+     */
+    public final String getDescription(){
+        return description;
+    }
+
+    /**
+     * @return Commands minimal supported hardware wersion
+     */
+    public int getMinHWVersion() {
+        return minHWVersion;
+    }
+
+    /**
+     * @return Commands default arguments
+     */
+    public final String getDefaultArguments(){
+        return defaultArguments;
+    }
+
+    /**
+     * @return defaultValue formatted for sending to the device
+     */
+    public final int getDefaultValue(){
+        return defaultValue;
+    }
+
+    /**
+     * @return userValue formatted for sending to the device
+     */
+    public final int getValue() {
+        return userValue;
+    }
+
+    /**
+     * Converts user value to string
+     *
+     * @return userValue as string if value is set, null otherwise
+     */
+    public String getValueAsString() {
+        if (this.userValue != -1) {
+            return valueToString(this.userValue);
+        }
+        else {
+            return null;
+        }
+    }
+
+    /**
+     * Converts default value to string
+     *
+     * @return defaultValue as string if value is set, null otherwise
+     */
+    public String getDefaultValueAsString() {
+        if (this.defaultValue != -1) {
+            return valueToString(this.defaultValue);
+        }
+        else {
+            return null;
+        }
+    }
+
+    /**
+     * @return minimum allowed command value
+     */
+    public int getMinVal() {
+        return minVal;
+    }
+
+    /**
+     * @return maximum allowed command value
+     */
+    public int getMaxVal() {
+        return maxVal;
+    }
+
+    /**
+     * @return factor of command value
+     */
+    public double getFactor() {
+        return factor;
+    }
+
+    /**
+     * @return true if command is pmtk command, false otherwise
+     */
+    public boolean isPmtk() {
+        return isPmtk;
+    }
+
+    /**
+     * Sets userValue from provided int if it converts to this Commands type of value
+     *
+     * @param iValue value to set
+     * @return true if value was set, false otherwise
+     */
+    public boolean setValue(int iValue) {
+        return setValueFromUncheckedUserProvidedValue((double) iValue);
+    }
+
+    /**
+     * Sets userValue from provided Double if it converts to this Commands type of value
+     *
+     * @param dValue value to set
+     * @return true if value was set, false otherwise
+     */
+    public boolean setValue(Double dValue) {
+        return setValueFromUncheckedUserProvidedValue(dValue);
+    }
+
+    /**
+     * Sets userValue from provided boolean if it converts to this Commands type of value
+     *
+     * @param bValue value to set
+     * @return true if value was set, false otherwise
+     */
+    public boolean setValue(boolean bValue) {
+        return setValueFromUncheckedUserProvidedValue(new Double(String.valueOf(bValue)));
+    }
+
+    /**
+     * Sets userValue from provided String if it converts to this Commands type of value
+     *
+     * @param sValue value to set
+     * @return true if value was set, false otherwise
+     */
+    public boolean setValue(String sValue) {
+        return setValueFromUncheckedUserProvidedValue(Double.valueOf(sValue));
+    }
+
+    /**
+     * Check if dValue is valid for this Command
+     *
+     * @param dValue user provided value
+     * @return proper int value if value combined with factor is in range
+     * "min <= value <= max", -1 otherwise
+     */
+    private int toIntValueChecked(Double dValue) {
         // filter only double and int
-        switch(this.getType()){
+        switch(this.getType()) {
 
             // if type int do nothing
             case BFV.TYPE_INT:
@@ -285,16 +435,97 @@ public class Command {
         }
 
         // check if its in range
-        if(isInRange(dValue)) {
-            converted = (int) dValue;
+        if(isInRange(dValue.intValue())) {
+            return dValue.intValue();
+        } else {
+            return -1;
         }
-
-        return converted;
     }
 
-    void resetUserValue() {
-        this.userValue = -1;
-        this.hasUserValue = false;
+    /**
+     * Sets command code and description
+     *
+     * @param code of command
+     * @param description of command
+     */
+    private Command(String code, String description) {
+        this.code = code;
+        this.description = description;
     }
 
+    /**
+     * Check if provided value is in this commands range of accepted values
+     *
+     * @param value to check
+     * @return true if Command.minVal <= value <= Command.maxVal
+     */
+    private boolean isInRange(int value) {
+        return (this.getMinVal() <= value && value <= this.getMaxVal());
+    }
+
+    /**
+     * Converts value to string base on this Commands type
+     *
+     * @param value to convert
+     * @return converted value
+     */
+    private String valueToString(int value) {
+        String ret = null;
+        switch(this.getType()){
+            case BFV.TYPE_INT:
+                ret = String.valueOf(value);
+                break;
+            case BFV.TYPE_DOUBLE:
+                ret = String.valueOf(value / this.getFactor());
+                break;
+            case BFV.TYPE_INTOFFSET:
+                ret = String.valueOf((int) (value + this.getFactor()));
+                break;
+            case BFV.TYPE_BOOLEAN:
+                ret = String.valueOf(value != 0);
+                break;
+        }
+        return ret;
+    }
+
+    /**
+     * Sets value to user provided value if it converts to this Commands type of value
+     *
+     * @param value to set
+     * @return true if value was set, false otherwise
+     */
+    private boolean setValueFromUncheckedUserProvidedValue(Double value) {
+        int converted = toIntValueChecked(value);
+        if(converted >= 0) {
+            userValue = converted;
+            hasValue = true;
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    /**
+     * Calculates checksum for pmtk Command
+     *
+     * @param value String to calculate checksum for
+     * @return calculated checksum
+     */
+    private static int pmtkChecksum(String value) {
+        char[] msgArray = value.toCharArray();
+
+        int checksum = 0;
+        for ( char c : msgArray )
+        {
+            if ( (c == '!') || (c == '$')){
+                return -1;
+            }
+            if (c == '*')
+                break;
+
+            checksum ^= c;
+        }
+        return checksum;
+    }
 }
