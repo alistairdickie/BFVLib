@@ -1,4 +1,4 @@
-package BFVlib;
+package BFVLib;
 
 /**
  * Command object is used to hold BlueFlyVario command codes and
@@ -103,7 +103,7 @@ public class Command {
          * @param factor of the parameter value
          */
         Builder setParameters(int type, int minVal, int maxVal, double factor) {
-            assert (type >= BFV.TYPE_INT && type <=BFV.TYPE_INTLIST);
+            assert (type >= BFV.TYPE_INT && type <= BFV.TYPE_INTLIST);
             cmd.type = type;
 
             assert (minVal >= 0);

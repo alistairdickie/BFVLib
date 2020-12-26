@@ -1,4 +1,4 @@
-package BFVlib;
+package BFVLib;
 
 import java.util.*;
 
@@ -755,4 +755,3 @@ public class BFV {
         // TODO: add tests
     }
 }
-

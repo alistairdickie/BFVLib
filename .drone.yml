@@ -1,0 +1,10 @@
+kind: pipeline
+name: default
+type: docker
+
+steps:
+  - name: BFVTest
+    image: gradle:jdk8
+    commands:
+      - gradle assemble
+      - gradle check

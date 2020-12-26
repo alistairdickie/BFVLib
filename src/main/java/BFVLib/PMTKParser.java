@@ -1,4 +1,4 @@
-package BFVlib;
+package BFVLib;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -57,7 +57,7 @@ public class PMTKParser {
                         int timeStamp = ByteBuffer.wrap(timeBytes).order(ByteOrder.LITTLE_ENDIAN).getInt();
 
 //                        int timeStamp = ((bytes[3] & 0xFF) << 24)|((bytes[2] & 0xFF) << 16)|((bytes[1] & 0xFF) << 8 )|((bytes[0] & 0xFF) << 0 );
-                        Date time = new java.util.Date((long)timeStamp*1000);
+                        Date time = new Date((long)timeStamp*1000);
 
                         int fix = bytes[4];
 
