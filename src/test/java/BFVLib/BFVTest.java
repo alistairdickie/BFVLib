@@ -1,3 +1,5 @@
+package BFVLib;
+
 import BFVLib.BFV;
 import BFVLib.Command;
 import org.junit.jupiter.api.Assertions;
